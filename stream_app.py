@@ -35,30 +35,6 @@ input_data = pd.DataFrame({
     'bmi': [bmi]  # 新增BMI
 })[["AMH", "AFC", "FSH", "age", "bmi"]]  # 确保列顺序与训练数据一致
 
-# 预测与解释
-col1, col2 = st.columns([1, 2])
-with col2:
-    # 预测概率
-    prob = model.predict_proba(input_data)[:, 1]
-    st.metric("预测高反应风险", f"{prob[0]:.2%}")
-
-    st.subheader("风险因素解析")
-    
-    # 使用 shap.TreeExplainer
-    explainer = shap.TreeExplainer(model)
-    shap_values = explainer.shap_values(input_data)
-    
-    # 将 shap_values 转换为 Explanation 对象
-    shap_explanation = shap.Explanation(
-        values=shap_values[1],  # 取类别1的 SHAP 值
-        base_values=explainer.expected_value[1],  # 取类别1的基线值
-        data=input_data.values,
-        feature_names=input_data.columns.tolist()
-    )
-    
-    # 绘制瀑布图
-    fig = shap.plots.waterfall(shap_explanation[0], max_display=5)
-    st.pyplot(fig)
 
 # 注意事项
 st.markdown("---")
