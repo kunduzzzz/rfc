@@ -44,26 +44,29 @@ with col2:
 
     st.subheader("风险因素解析")
     
+    # 使用 shap.TreeExplainer
     explainer = shap.TreeExplainer(model)
-    shap_values = explainer(input_data)
+    shap_values = explainer.shap_values(input_data)
     
-    # 自动适配SHAP版本
-    try:
-        waterfall_values = shap_values[0, :, 1]  # SHAP 0.44+
-    except IndexError:
-        waterfall_values = shap_values[:, 1][0]  # SHAP 0.43-
+    # 将 shap_values 转换为 Explanation 对象
+    shap_explanation = shap.Explanation(
+        values=shap_values[1],  # 取类别1的 SHAP 值
+        base_values=explainer.expected_value[1],  # 取类别1的基线值
+        data=input_data.values,
+        feature_names=input_data.columns.tolist()
+    )
     
-    # 确保特征名称传递
-    if hasattr(waterfall_values, 'feature_names'):
-        waterfall_values.feature_names = input_data.columns.tolist()
-    
-    # 设置中文标签（可选）
-    if hasattr(waterfall_values, 'data'):
-        waterfall_values.data = pd.Series(waterfall_values.data, 
-                                        index=['AMH', 'AFC', 'FSH', '年龄', 'BMI'])
-    
-    fig = shap.plots.waterfall(waterfall_values, max_display=5)
+    # 绘制瀑布图
+    fig = shap.plots.waterfall(shap_explanation[0], max_display=5)
     st.pyplot(fig)
+
+# 注意事项
+st.markdown("---")
+st.warning("""
+**使用限制**:
+1. 适用于未接受过卵巢手术的患者
+2. 最终决策需结合临床判断
+""")
 
 # 注意事项
 st.markdown("---")
