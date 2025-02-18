@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import pickle
 import os
-import shap
 
 # 修改模型路径
 model_path = os.path.join(os.getcwd(), 'random_forest_model.pkl')
@@ -35,7 +34,28 @@ input_data = pd.DataFrame({
     'bmi': [bmi]  # 新增BMI
 })[["AMH", "AFC", "FSH", "age", "bmi"]]  # 确保列顺序与训练数据一致
 
+# 预测与解释
+col1, col2 = st.columns([1, 2])
 
+with col1:
+    if st.button("开始风险评估"):
+        # 概率预测
+        prob = model.predict_proba(input_data)[0][1]
+        risk_level = "高风险" if prob >= 0.6 else "中风险" if prob >= 0.3 else "低风险"
+
+        # 临床解读
+        st.subheader("评估结果")
+
+        # 使用 st.metric 显示预测概率和风险等级
+        st.metric(label="预测概率", value=f"{prob:.2%}")
+        st.metric(label="风险等级", value=risk_level)
+
+        st.markdown(f"""
+        **临床建议**:
+        - {">5% Gn剂量减少" if risk_level == "高风险" else "常规剂量"}
+        - {"建议使用拮抗剂方案" if risk_level == "高风险" else "可考虑长方案"}
+        - {"建议冷冻全胚" if risk_level == "高风险" else "可考虑鲜胚移植"}
+        """)
 # 注意事项
 st.markdown("---")
 st.warning("""
