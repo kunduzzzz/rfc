@@ -37,29 +37,33 @@ input_data = pd.DataFrame({
 
 # 预测与解释
 col1, col2 = st.columns([1, 2])
-
-with col1:
-    if st.button("开始风险评估"):
-        prob = model.predict_proba(input_data)[0][1]
-        # ...保持原有风险计算逻辑...
-
 with col2:
-    if 'prob' in locals():
-        # SHAP解释需要调整索引
-        explainer = shap.TreeExplainer(model)
-        shap_values = explainer.shap_values(input_data)
-        
-        # 使用二维索引 [1][0] 获取正类解释
-        fig = shap.plots.waterfall(shap_values[1][0], max_display=5)  # 显示前5个重要特征
-        st.pyplot(fig)
-        
-        # 更新特征说明
-        st.markdown("""
-        **特征说明**:
-        - 正值增加风险，负值降低风险
-        - AMH/AFC仍是主要预测因子
-        - BMI呈现U型影响（过低/过高均增加风险）
-        """)
+    # 预测概率
+    prob = model.predict_proba(input_data)[:, 1]
+    st.metric("预测高反应风险", f"{prob[0]:.2%}")
+
+    st.subheader("风险因素解析")
+    
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer(input_data)
+    
+    # 自动适配SHAP版本
+    try:
+        waterfall_values = shap_values[0, :, 1]  # SHAP 0.44+
+    except IndexError:
+        waterfall_values = shap_values[:, 1][0]  # SHAP 0.43-
+    
+    # 确保特征名称传递
+    if hasattr(waterfall_values, 'feature_names'):
+        waterfall_values.feature_names = input_data.columns.tolist()
+    
+    # 设置中文标签（可选）
+    if hasattr(waterfall_values, 'data'):
+        waterfall_values.data = pd.Series(waterfall_values.data, 
+                                        index=['AMH', 'AFC', 'FSH', '年龄', 'BMI'])
+    
+    fig = shap.plots.waterfall(waterfall_values, max_display=5)
+    st.pyplot(fig)
 
 # 注意事项
 st.markdown("---")
